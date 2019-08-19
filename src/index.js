@@ -13,25 +13,38 @@ const loadStorehouse = () => {
     z: Math.floor(index / 6) - 12,
   }));
 
-  const boxWidth = 1;
-  const boxHeight = 1;
-  const boxDepth = 1;
-  Storehouse.crates.forEach(crate => {
-    const geometry = new THREE.BoxBufferGeometry(boxWidth, boxHeight, boxDepth);
+  {
+    const geometry = new THREE.PlaneBufferGeometry(2000, 2000);
+    const material = new THREE.MeshPhongMaterial({ color: 0x808080, dithering: true });
+    const floor = new THREE.Mesh(geometry, material);
+    floor.receiveShadow = true;
+    floor.rotation.x = -Math.PI * 0.5;
+    floor.position.set(0, -0.5, 0);
+    ThreeEnvironment.scene.add(floor);
+  }
 
-    const texture = new THREE.TextureLoader().load('assets/crate.jpg');
-    const material = new THREE.MeshBasicMaterial({ map: texture });
-    const cube = new THREE.Mesh(geometry, material);
-    cube.position.x = crate.x;
-    cube.position.y = crate.y;
-    cube.position.z = crate.z;
+  {
+    const boxWidth = 1;
+    const boxHeight = 1;
+    const boxDepth = 1;
+    Storehouse.crates.forEach(crate => {
+      const geometry = new THREE.BoxBufferGeometry(boxWidth, boxHeight, boxDepth);
 
-    ThreeEnvironment.scene.add(cube);
-  });
+      const texture = new THREE.TextureLoader().load('assets/crate.jpg');
+      const material = new THREE.MeshPhongMaterial({ map: texture });
+      const cube = new THREE.Mesh(geometry, material);
+      cube.position.set(crate.x, crate.y, crate.z);
+      cube.castShadow = true;
+
+      ThreeEnvironment.scene.add(cube);
+    });
+  }
 };
 
 const animate = () => {
   requestAnimationFrame(animate);
+
+  ThreeEnvironment.controls.update();
 
   const delta = ThreeEnvironment.clock.getDelta() * 0.5;
 
