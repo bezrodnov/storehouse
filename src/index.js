@@ -6,7 +6,7 @@ const Storehouse = {
   crates: [],
 };
 
-const loadStorehouse = () => {
+const loadStorehouse = (): void => {
   Storehouse.crates = new Array(36).fill(0).map((el, index) => ({
     x: (index % 6) - 3,
     y: 0,
@@ -43,13 +43,6 @@ const loadStorehouse = () => {
 
 const animate = () => {
   requestAnimationFrame(animate);
-
-  ThreeEnvironment.controls.update();
-
-  const delta = ThreeEnvironment.clock.getDelta() * 0.5;
-
-  // camera.position.x += delta;
-
   ThreeEnvironment.render();
 };
 
