@@ -35,6 +35,7 @@
   "dependencies": {
     "dat.gui": "^0.7.6",
     "require": "^2.4.20",
+    "stats-js": "^1.0.1",
     "three": "^0.107.0"
   }
 }

@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { body, getElementById } from './domUtils.js';
 import { GUI } from 'dat.gui';
+import Stats from 'stats-js';
 
 import FirstPersonControls from './three/FirstPersonControls';
 import OrbitControls from './three/OrbitControls';
@@ -15,55 +16,37 @@ class ThreeEnvironment {
   scene: THREE.Scene;
   clock: THREE.Clock;
   renderer: THREE.WebGLRenderer;
-  light: THREE.SpotLight;
+  
+  lightHelpers: Array<THREE.SpotLightHelper>;
+  shadowCameraHelpers: Array<THREE.shadowCameraHelper>;
 
-  lightHelper: THREE.SpotLightHelper;
-  shadowCameraHelper: THREE.shadowCameraHelper;
-
-  controls: PointerLockControls;
+  // controls: PointerLockControls;
+  controls: OrbitControls;
 
   constructor() {
     this.camera = new THREE.PerspectiveCamera(75, getAspect(), 0.1, 2000);
+
     this.scene = new THREE.Scene();
     this.clock = new THREE.Clock();
 
     this.setupRenderer();
     this.setupLight();
-    this.setupPointerLockControlsControls();
-    this.setupGUI();
+    // this.setupPointerLockControls();
+    this.setupOrbitControls();
     
     this.setupResizeHandler();
+
+    this.setupAnimation();
   }
 
   setupLight(): void {
-    this.light = new THREE.SpotLight(0xeded88, 1);
-    this.light.position.set(0, 10, -10);
-    this.light.penumbra = 0.4;
-    this.light.decay = 1.5;
-    this.light.distance = 20;
-
-    this.light.castShadow = true;
-    this.light.shadow.mapSize.width = 1024;
-    this.light.shadow.mapSize.height = 1024;
-    this.light.shadow.camera.near = 10;
-    this.light.shadow.camera.far = 200;
-
-    this.light.target.position.set(0, -20, 0);
-
-    this.scene.add(this.light);
-    this.scene.add(this.light.target);
-
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.05);
+    this.lightHelpers = [];
+    this.shadowCameraHelpers = [];
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.15);
     this.scene.add(ambientLight);
-
-    this.lightHelper = new THREE.SpotLightHelper(this.light);
-    this.scene.add(this.lightHelper);
-
-    this.shadowCameraHelper = new THREE.CameraHelper(this.light.shadow.camera);
-    this.scene.add(this.shadowCameraHelper);
   }
 
-  setupPointerLockControlsControls(): void {
+  setupPointerLockControls(): void {
     this.controls = new PointerLockControls(this.camera);
 
     const blocker:HTMLElement = getElementById('blocker');
@@ -158,16 +141,15 @@ class ThreeEnvironment {
     }, false);
   }
 
-  setupFirstPersonControls() {
+  setupFirstPersonControls(): void {
     this.controls = new FirstPersonControls(this.camera);
     this.controls.movementSpeed = 1000;
     this.controls.lookSpeed = 30;
     this.controls.lookVertical = true;
   }
 
-  setupOrbitControls() {
+  setupOrbitControls(): void {
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.camera.position.set(0, 5, -20);
     this.controls.update();
   }
 
@@ -180,49 +162,90 @@ class ThreeEnvironment {
     body.appendChild(this.renderer.domElement);
   }
 
-  setupGUI(): void {
-    const spotLight:THREE.SpotLight = this.light;
+  setupAnimation(): void {
+    let shouldAnimate = true;
+    window.addEventListener('blur', () => shouldAnimate = false);
+    window.addEventListener('focus', () => shouldAnimate = true);
+
+    const animate = () => {
+      requestAnimationFrame(animate);
+      if (shouldAnimate) {
+        this.render();
+      }
+    };
+
+    animate();
+  }
+
+  setupGUI(light:THREE.SpotLight): void {
     const render:function = this.render;
 
     const gui = new GUI();
     const params = {
-      'light color': spotLight.color.getHex(),
-      intensity: spotLight.intensity,
-      distance: spotLight.distance,
-      angle: spotLight.angle,
-      penumbra: spotLight.penumbra,
-      decay: spotLight.decay,
+      'light color': light.color.getHex(),
+      intensity: light.intensity,
+      distance: light.distance,
+      angle: light.angle,
+      penumbra: light.penumbra,
+      decay: light.decay,
     };
     gui.addColor(params, 'light color').onChange(val => {
-      spotLight.color.setHex(val);
+      light.color.setHex(val);
       render();
     });
     gui.add(params, 'intensity', 0, 2).onChange(val => {
-      spotLight.intensity = val;
+      light.intensity = val;
       render();
     });
     gui.add(params, 'distance', 10, 100).onChange(val => {
-      spotLight.distance = val;
+      light.distance = val;
       render();
     });
     gui.add(params, 'angle', 0, Math.PI / 3).onChange(val => {
-      spotLight.angle = val;
+      light.angle = val;
       render();
     });
     gui.add(params, 'penumbra', 0, 1).onChange(val => {
-      spotLight.penumbra = val;
+      light.penumbra = val;
       render();
     });
     gui.add(params, 'decay', 1, 2).onChange(val => {
-      spotLight.decay = val;
+      light.decay = val;
       render();
     });
     gui.open();
   }
 
+  addLight(x: number, y: number, z: number, targetX: number, targetY: number, targetZ: number): void {
+    const light = new THREE.SpotLight(0xeded88, 1);
+    light.position.set(x, y, z);
+    light.penumbra = 0.4;
+    light.decay = 1.5;
+    light.distance = 3 * y;
+
+    // light.castShadow = true;
+    // light.shadow.mapSize.width = 1024;
+    // light.shadow.mapSize.height = 1024;
+    // light.shadow.camera.near = 10;
+    // light.shadow.camera.far = 200;
+
+    light.target.position.set(targetX, targetY, targetZ);
+
+    this.scene.add(light);
+    this.scene.add(light.target);
+
+    // const lightHelper = new THREE.SpotLightHelper(light);
+    // this.scene.add(lightHelper);
+    // this.lightHelpers.push(lightHelper);
+
+    // const shadowCameraHelper = new THREE.CameraHelper(light.shadow.camera);
+    // this.scene.add(shadowCameraHelper);
+    // this.shadowCameraHelpers.push(shadowCameraHelper);
+  }
+
   render(): void {
-    this.lightHelper.update();
-    this.shadowCameraHelper.update();
+    this.lightHelpers.forEach(helper => helper.update());
+    this.shadowCameraHelpers.forEach(helper => helper.update());
     this.controls.update(this.clock.getDelta());
     this.renderer.render(this.scene, this.camera);
   }
